@@ -191,29 +191,38 @@ export default function DashboardTab({ tabungan, transaksi, onDataUpdate, canIns
         })
         .reduce((sum, t) => sum + t.jumlah, 0);
 
-      const statistik = transaksi.reduce((acc: any[], t) => {
+      const last6Months:any[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(currentYear, currentMonth - i, 1);
+        const monthName = d.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+        const monthKey = `${d.getFullYear()}-${d.getMonth()}`; 
+        
+        last6Months.push({
+          key: monthKey,
+          bulan: monthName,
+          pemasukan: 0,
+          pengeluaran: 0
+        });
+      }
+
+      transaksi.forEach(t => {
         const tDate = new Date(t.tanggal);
-        const monthKey = `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, '0')}`;
-        const monthName = tDate.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+        const tKey = `${tDate.getFullYear()}-${tDate.getMonth()}`;
+        const targetMonth = last6Months.find(m => m.key === tKey);
         
-        let existing = acc.find(item => item.bulan === monthName);
-        if (!existing) {
-          existing = { bulan: monthName, pemasukan: 0, pengeluaran: 0 };
-          acc.push(existing);
+        if (targetMonth) {
+          if (t.tipe === 'pemasukan') {
+            targetMonth.pemasukan += t.jumlah;
+          } else {
+            targetMonth.pengeluaran += t.jumlah;
+          }
         }
-        
-        if (t.tipe === 'pemasukan') {
-          existing.pemasukan += t.jumlah;
-        } else {
-          existing.pengeluaran += t.jumlah;
-        }
-        
-        return acc;
-      }, []).slice(-6);
+      });
 
       setPemasukanBulanIni(pemasukan);
       setPengeluaranBulanIni(pengeluaran);
-      setStatistikBulanan(statistik);
+      setStatistikBulanan(last6Months);
+      
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -223,6 +232,7 @@ export default function DashboardTab({ tabungan, transaksi, onDataUpdate, canIns
 
   const totalSaldo = tabungan.reduce((total, t) => total + t.jumlah, 0);
   const bulanIni = new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  
   const chartData = statistikBulanan.map(stat => ({
     bulan: stat.bulan,
     pemasukan: stat.pemasukan,
@@ -342,7 +352,7 @@ export default function DashboardTab({ tabungan, transaksi, onDataUpdate, canIns
               }).format(pemasukanBulanIni)}
             </div>
             <p className="text-xs text-green-600 mt-1">
-              {transaksi.filter(t => t.tipe === 'pemasukan').length} transaksi
+              {transaksi.filter(t => t.tipe === 'pemasukan' && new Date(t.tanggal).getMonth() === new Date().getMonth() && new Date(t.tanggal).getFullYear() === new Date().getFullYear()).length} transaksi
             </p>
           </CardContent>
         </Card>
@@ -364,7 +374,7 @@ export default function DashboardTab({ tabungan, transaksi, onDataUpdate, canIns
               }).format(pengeluaranBulanIni)}
             </div>
             <p className="text-xs text-red-600 mt-1">
-              {transaksi.filter(t => t.tipe === 'pengeluaran').length} transaksi
+              {transaksi.filter(t => t.tipe === 'pengeluaran' && new Date(t.tanggal).getMonth() === new Date().getMonth() && new Date(t.tanggal).getFullYear() === new Date().getFullYear()).length} transaksi
             </p>
           </CardContent>
         </Card>
