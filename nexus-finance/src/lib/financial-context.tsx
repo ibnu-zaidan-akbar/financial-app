@@ -551,6 +551,15 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
             const activeTabungan = [...tabungan];
             const worksheet = workbook.addWorksheet(monthYear);
+            const numToCol = (num: number) => {
+              let letter = '';
+              while (num > 0) {
+                const temp = (num - 1) % 26;
+                letter = String.fromCharCode(temp + 65) + letter;
+                num = (num - temp - 1) / 26;
+              }
+              return letter;
+            };
 
             const headerRow4: string[] = ['No', 'Tanggal'];
             const headerRow5: string[] = ['', ''];
@@ -653,12 +662,25 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
             activeTabungan.forEach(tab => {
               let startBal = tab.saldoAwal || 0;
-              const pastTrx = transaksi.filter(t => t.tabunganId === tab.id && new Date(t.tanggal).getTime() < startOfMonth);
+              const pastTrx = transaksi.filter(t =>
+                (t.tabunganId === tab.id || t.tabunganTujuanId === tab.id) &&
+                new Date(t.tanggal).getTime() < startOfMonth
+              );
+              
               pastTrx.forEach(t => {
-                if (t.tipe === 'pemasukan') startBal += t.jumlah;
-                else startBal -= t.jumlah;
+                if (t.tipe === 'mutasi') {
+                  if (t.tabunganId === tab.id) {
+                    startBal -= (t.jumlah + (t.biayaAdmin || 0));
+                  }
+                  if (t.tabunganTujuanId === tab.id) {
+                    startBal += t.jumlah;
+                  }
+                } else {
+                  if (t.tipe === 'pemasukan') startBal += t.jumlah;
+                  else startBal -= t.jumlah;
+                }
               });
-              runningBalances[tab.id] = startBal;
+              runningBalances[tab.id] = startBal; 
             });
 
             const firstDayString = new Date(startOfMonth).toLocaleDateString('id-ID');
@@ -667,18 +689,18 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
             initialRow[1] = firstDayString;
             initialRow[noteColIndex - 1] = 'SALDO PINDAHAN BULAN LALU';
 
-            let initialGrandTotal = 0;
             Object.keys(catMap).forEach(cat => {
-              let catBal = 0;
+              const cellsToSum: string[] = [];
               catMap[cat].tabs.forEach(tabId => {
                 const b = runningBalances[tabId] || 0;
                 initialRow[colMap[tabId].balance - 1] = b;
-                catBal += b;
+                cellsToSum.push(`${numToCol(colMap[tabId].balance)}6`);
               });
-              initialRow[catMap[cat].balance - 1] = catBal;
-              initialGrandTotal += catBal;
+              initialRow[catMap[cat].balance - 1] = { formula: cellsToSum.length > 0 ? `SUM(${cellsToSum.join(',')})` : '0' };
             });
-            initialRow[totalColIndex - 1] = initialGrandTotal;
+
+            const grandTotalCells = Object.keys(catMap).map(cat => `${numToCol(catMap[cat].balance)}6`);
+            initialRow[totalColIndex - 1] = { formula: grandTotalCells.length > 0 ? `SUM(${grandTotalCells.join(',')})` : '0' };
 
             const initialAddedRow = worksheet.addRow(initialRow);
 
@@ -724,7 +746,26 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
                 row[1] = '';
               }
 
-              if (trx.tabunganId && colMap[trx.tabunganId]) {
+              if (trx.tipe === 'mutasi' && trx.tabunganId && trx.tabunganTujuanId) {
+                const colsAsal = colMap[trx.tabunganId];
+                const colsTujuan = colMap[trx.tabunganTujuanId];
+                const admin = trx.biayaAdmin || 0;
+
+                if (colsAsal) {
+                  row[colsAsal.out - 1] = trx.jumlah + admin;
+                  runningBalances[trx.tabunganId] -= (trx.jumlah + admin);
+                }
+                
+                if (colsTujuan) {
+                  row[colsTujuan.in - 1] = trx.jumlah;
+                  runningBalances[trx.tabunganTujuanId] += trx.jumlah;
+                }
+
+                if (admin > 0) {
+                  row[noteColIndex - 1] += ` (Biaya Admin: Rp ${admin.toLocaleString('id-ID')})`;
+                }
+                
+              } else if (trx.tabunganId && colMap[trx.tabunganId]) {
                 const cols = colMap[trx.tabunganId];
                 const amount = trx.jumlah;
                 if (trx.tipe === 'pemasukan') {
@@ -736,19 +777,22 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
                 }
               }
 
-              let grandTotal = 0;
               Object.keys(catMap).forEach(cat => {
-                let catBalance = 0;
+                const cellsToSum: string[] = [];
                 catMap[cat].tabs.forEach(tabId => {
-                  const b = runningBalances[tabId] || 0;
-                  row[colMap[tabId].balance - 1] = b;
-                  catBalance += b;
+                  const cols = colMap[tabId];
+                  const colIn = numToCol(cols.in);
+                  const colOut = numToCol(cols.out);
+                  const colBal = numToCol(cols.balance);
+                  const prevRow = currentRowIndex - 1;
+                  const formulaBal = `${colBal}${prevRow} + IF(${colIn}${currentRowIndex}="-", 0, ${colIn}${currentRowIndex}) - IF(${colOut}${currentRowIndex}="-", 0, ${colOut}${currentRowIndex})`;
+                  row[cols.balance - 1] = { formula: formulaBal };
+                  cellsToSum.push(`${colBal}${currentRowIndex}`);
                 });
-                row[catMap[cat].balance - 1] = catBalance;
-                grandTotal += catBalance;
+                row[catMap[cat].balance - 1] = { formula: cellsToSum.length > 0 ? `SUM(${cellsToSum.join(',')})` : '0' };
               });
-
-              row[totalColIndex - 1] = grandTotal;
+              const grandTotalCells = Object.keys(catMap).map(cat => `${numToCol(catMap[cat].balance)}${currentRowIndex}`);
+              row[totalColIndex - 1] = { formula: grandTotalCells.length > 0 ? `SUM(${grandTotalCells.join(',')})` : '0' };
 
               const newRow = worksheet.addRow(row);
 
