@@ -2,7 +2,7 @@
 import { prisma } from '@/lib/prisma';
 
 export async function syncTransaksiToCloud(userId: string, data: any) {
-  const { id, tanggal, createdAt, updatedAt, ...rest } = data;
+  const { id, tanggal, createdAt, updatedAt, tabunganTujuanId, biayaAdmin, ...rest } = data;
 
   return await prisma.transaksi.upsert({
     where: { id: id },
@@ -10,12 +10,16 @@ export async function syncTransaksiToCloud(userId: string, data: any) {
       ...rest,
       tanggal: new Date(tanggal),
       updatedAt: new Date(),
+      tabunganTujuanId: tabunganTujuanId || null,
+      biayaAdmin: biayaAdmin ? Number(biayaAdmin) : 0,
     },
     create: {
       ...rest,
       id: id,
       userId: userId,
       tanggal: new Date(tanggal),
+      tabunganTujuanId: tabunganTujuanId || null,
+      biayaAdmin: biayaAdmin ? Number(biayaAdmin) : 0,
     }
   });
 }
