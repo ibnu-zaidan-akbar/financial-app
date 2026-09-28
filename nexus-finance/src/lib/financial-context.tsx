@@ -25,6 +25,8 @@ interface TransaksiData {
   tipe: string;
   kategoriId: string | null;
   tabunganId: string | null;
+  tabunganTujuanId?: string | null;
+  biayaAdmin?: number;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -47,6 +49,8 @@ interface FinancialContextType {
     tipe: string;
     kategoriId?: string;
     tabunganId?: string;
+    tabunganTujuanId?: string | null;
+    biayaAdmin?: number;
   }) => Promise<any>;
   dataSource: DataSource;
   isOnline: boolean;
@@ -64,7 +68,7 @@ const FinancialContext = createContext<FinancialContextType | undefined>(undefin
 
 const getUserId = () => {
   if (typeof window === 'undefined') return '00000000-0000-0000-0000-000000000000';
-  
+
   let id = localStorage.getItem('financeUserId');
   if (!id) {
     id = crypto.randomUUID();
@@ -78,15 +82,15 @@ const getUserId = () => {
 
 export const getKategoriFromNama = (nama: string) => {
   const lowerNama = nama.toLowerCase();
-  if (lowerNama.includes('bca') || lowerNama.includes('mandiri') || lowerNama.includes('bni') || 
-      lowerNama.includes('bri') || lowerNama.includes('cimb') || lowerNama.includes('danamon') ||
-      lowerNama.includes('permata') || lowerNama.includes('bank')) {
+  if (lowerNama.includes('bca') || lowerNama.includes('mandiri') || lowerNama.includes('bni') ||
+    lowerNama.includes('bri') || lowerNama.includes('cimb') || lowerNama.includes('danamon') ||
+    lowerNama.includes('permata') || lowerNama.includes('bank')) {
     return 'bank';
-  } else if (lowerNama.includes('gopay') || lowerNama.includes('ovo') || lowerNama.includes('dana') || 
-             lowerNama.includes('shopeepay') || lowerNama.includes('linkaja') || lowerNama.includes('sakuku')) {
+  } else if (lowerNama.includes('gopay') || lowerNama.includes('ovo') || lowerNama.includes('dana') ||
+    lowerNama.includes('shopeepay') || lowerNama.includes('linkaja') || lowerNama.includes('sakuku')) {
     return 'e-wallet';
-  } else if (lowerNama.includes('ktm') || lowerNama.includes('tapcash') || lowerNama.includes('flazz') || lowerNama.includes('brizzi') || 
-             lowerNama.includes('emoney') || lowerNama.includes('ezlink')) {
+  } else if (lowerNama.includes('ktm') || lowerNama.includes('tapcash') || lowerNama.includes('flazz') || lowerNama.includes('brizzi') ||
+    lowerNama.includes('emoney') || lowerNama.includes('ezlink')) {
     return 'e-money';
   } else if (lowerNama.includes('cash') || lowerNama.includes('tunai') || lowerNama.includes('uang')) {
     return 'cash';
@@ -113,13 +117,13 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
     autoSave: true,
     autoLoad: true
   });
-  
+
   const syncToCloud = async (type: 'transaksi' | 'tabungan', data: any) => {
     if (!navigator.onLine || userId === 'default_user') {
       if (!navigator.onLine) setSyncStatus('offline');
       return;
     }
-    
+
     setSyncStatus('syncing');
     try {
       if (type === 'transaksi') {
@@ -146,14 +150,14 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
         if (anonId && anonId !== currentId && anonId !== 'default_user' && !isMigrating) {
           setIsMigrating(true);
           console.log('🔄 Mendeteksi data anonim, memulai migrasi...');
-          
+
           try {
             const tabKey = `finance_data_tabungan_${anonId}`;
             const trxKey = `finance_data_transaksi_${anonId}`;
-            
+
             const oldTabungan = localStorage.getItem(tabKey);
             const oldTransaksi = localStorage.getItem(trxKey);
-            
+
             if (oldTabungan || oldTransaksi) {
               const tabunganData = JSON.parse(oldTabungan || '[]');
               const transaksiData = JSON.parse(oldTransaksi || '[]');
@@ -162,7 +166,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
                 ...tabunganData.map((tab: any) => syncTabunganToCloud(currentId, tab)),
                 ...transaksiData.map((trx: any) => syncTransaksiToCloud(currentId, trx))
               ]);
-              
+
               localStorage.removeItem(tabKey);
               localStorage.removeItem(trxKey);
               console.log('✅ Data berhasil dikirim ke Cloud');
@@ -170,10 +174,10 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
             localStorage.removeItem('financeUserId');
             document.cookie = "guest-mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-            
+
             console.log('✅ Migrasi tuntas, menyegarkan sesi...');
             window.location.href = "/";
-            
+
           } catch (err) {
             console.error('❌ Migrasi gagal:', err);
             setIsMigrating(false);
@@ -204,7 +208,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
         updateData(cloudData.tabungan, cloudData.transaksi);
         console.log('✅ Data berhasil disinkronkan dari Cloud');
       }
-      
+
       setSyncStatus('synced');
       setLastSync(new Date());
     } catch (error) {
@@ -256,13 +260,13 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
     const target = tabungan.find(t => t.id === id);
     if (!target) return;
 
-    const updatedTab: TabunganData = { 
-      ...target, 
-      jumlah: newBalance, 
-      updatedAt: new Date() 
+    const updatedTab: TabunganData = {
+      ...target,
+      jumlah: newBalance,
+      updatedAt: new Date()
     };
-    
-    const newList = tabungan.map((t): TabunganData => 
+
+    const newList = tabungan.map((t): TabunganData =>
       t.id === id ? updatedTab : t
     );
 
@@ -280,9 +284,9 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
+
     setTabungan((prev) => [...prev, newTabungan]);
-    
+
     try {
       await updateData([...tabungan, newTabungan], transaksi);
       await syncToCloud('tabungan', newTabungan);
@@ -297,9 +301,9 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
   const updateTabungan = async (id: string, data: { nama: string; saldoAwal: number }) => {
     const oldData = [...tabungan];
 
-    setTabungan((prev) => 
-      prev.map((t) => t.id === id ? { 
-        ...t, nama: data.nama, saldoAwal: data.saldoAwal, jumlah: data.saldoAwal,updatedAt: new Date() 
+    setTabungan((prev) =>
+      prev.map((t) => t.id === id ? {
+        ...t, nama: data.nama, saldoAwal: data.saldoAwal, jumlah: data.saldoAwal, updatedAt: new Date()
       } : t)
     );
 
@@ -307,7 +311,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
       const updatedObj = { id, ...data, jumlah: data.saldoAwal, updatedAt: new Date() };
       await updateData(tabungan.map(t => t.id === id ? (updatedObj as any) : t), transaksi);
       await syncToCloud('tabungan', updatedObj);
-      
+
       if (status === 'authenticated') await fetchFromCloud(userId);
     } catch (error) {
       setTabungan(oldData);
@@ -339,16 +343,20 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
     tipe: string;
     kategoriId?: string;
     tabunganId?: string;
+    tabunganTujuanId?: string | null;
+    biayaAdmin?: number;
   }) => {
     const newTransaksi: TransaksiData = {
       id: crypto.randomUUID(),
-      judul: data.judul || (data.tipe === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'),
+      judul: data.judul || (data.tipe === 'pemasukan' ? 'Pemasukan' : data.tipe === 'mutasi' ? 'Mutasi' : 'Pengeluaran'),
       jumlah: data.jumlah,
       deskripsi: data.deskripsi || null,
-      tanggal: new Date(data.tanggal).toISOString(), 
+      tanggal: new Date(data.tanggal).toISOString(),
       tipe: data.tipe,
       kategoriId: data.kategoriId || null,
       tabunganId: data.tabunganId || null,
+      tabunganTujuanId: data.tabunganTujuanId || null,
+      biayaAdmin: data.biayaAdmin || 0,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -358,15 +366,31 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
     const newTransactionsList = [newTransaksi, ...oldTransactions];
     setTransaksi(newTransactionsList);
 
-    let affectedTab: TabunganData | null = null;
+    let affectedTabs: TabunganData[] = [];
     let newTabunganList = [...oldSavings];
 
-    if (data.tabunganId) {
+    if (data.tipe === 'mutasi' && data.tabunganId && data.tabunganTujuanId) {
+      const biaya = data.biayaAdmin || 0;
+      newTabunganList = oldSavings.map((t) => {
+        if (t.id === data.tabunganId) {
+          const updated = { ...t, jumlah: t.jumlah - (data.jumlah + biaya), updatedAt: new Date() };
+          affectedTabs.push(updated);
+          return updated;
+        }
+        if (t.id === data.tabunganTujuanId) {
+          const updated = { ...t, jumlah: t.jumlah + data.jumlah, updatedAt: new Date() };
+          affectedTabs.push(updated);
+          return updated;
+        }
+        return t;
+      });
+      setTabungan(newTabunganList);
+    } else if (data.tabunganId) {
       newTabunganList = oldSavings.map((t) => {
         if (t.id === data.tabunganId) {
           const change = data.tipe === 'pengeluaran' ? -data.jumlah : data.jumlah;
           const updated = { ...t, jumlah: t.jumlah + change, updatedAt: new Date() };
-          affectedTab = updated;
+          affectedTabs.push(updated);
           return updated;
         }
         return t;
@@ -377,12 +401,13 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
     try {
       await updateData(newTabunganList, newTransactionsList);
       await syncToCloud('transaksi', newTransaksi);
-      
-      if (affectedTab) {
+      if (affectedTabs.length > 0) {
         console.log('☁️ Sinkronisasi saldo tabungan ke Supabase...');
-        await syncToCloud('tabungan', affectedTab);
+        for (const tab of affectedTabs) {
+          await syncToCloud('tabungan', tab);
+        }
       }
-      
+
       return newTransaksi;
     } catch (error) {
       console.error("❌ Gagal sinkron ke Cloud, memulihkan data lokal...", error);
@@ -402,18 +427,34 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
     const updatedTransactions = originalTransactions.filter((t) => t.id !== id);
     setTransaksi(updatedTransactions);
 
-    let affectedTab: TabunganData | null = null;
+    let affectedTabs: TabunganData[] = [];
     let newTabunganList = [...originalSavings];
 
-    if (transactionToDelete.tabunganId) {
+    if (transactionToDelete.tipe === 'mutasi' && transactionToDelete.tabunganId && transactionToDelete.tabunganTujuanId) {
+      const biaya = transactionToDelete.biayaAdmin || 0;
       newTabunganList = originalSavings.map((t) => {
         if (t.id === transactionToDelete.tabunganId) {
-          const amountChange = transactionToDelete.tipe === 'pemasukan' 
+          const updated = { ...t, jumlah: t.jumlah + (transactionToDelete.jumlah + biaya), updatedAt: new Date() };
+          affectedTabs.push(updated);
+          return updated;
+        }
+        if (t.id === transactionToDelete.tabunganTujuanId) {
+          const updated = { ...t, jumlah: t.jumlah - transactionToDelete.jumlah, updatedAt: new Date() };
+          affectedTabs.push(updated);
+          return updated;
+        }
+        return t;
+      });
+      setTabungan(newTabunganList);
+    } else if (transactionToDelete.tabunganId) {
+      newTabunganList = originalSavings.map((t) => {
+        if (t.id === transactionToDelete.tabunganId) {
+          const amountChange = transactionToDelete.tipe === 'pemasukan'
             ? -transactionToDelete.jumlah
             : transactionToDelete.jumlah;
-          
+
           const updated = { ...t, jumlah: t.jumlah + amountChange, updatedAt: new Date() };
-          affectedTab = updated;
+          affectedTabs.push(updated);
           return updated;
         }
         return t;
@@ -425,11 +466,13 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
       await updateData(newTabunganList, updatedTransactions);
       if (status === 'authenticated') {
         await deleteTransaksiFromCloud(userId, id);
-        if (affectedTab) {
-          await syncTabunganToCloud(userId, affectedTab);
+        if (affectedTabs.length > 0) {
+          for (const tab of affectedTabs) {
+            await syncTabunganToCloud(userId, tab);
+          }
         }
       }
-      
+
       console.log('✅ Berhasil hapus transaksi');
     } catch (error) {
       setTransaksi(originalTransactions);
@@ -443,7 +486,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
   const forceSync = async () => {
     console.log('🔄 "Syncing" is just refreshing local data...');
     setSyncStatus('syncing');
-    
+
     try {
       await loadFromLocal();
       setTabungan(localTabungan);
@@ -460,7 +503,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleOnline = () => {
       console.log('🌐 Internet terdeteksi aktif! Menjalankan sinkronisasi otomatis...');
-      forceSync(); 
+      forceSync();
     };
 
     window.addEventListener('online', handleOnline);
@@ -476,20 +519,20 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
       if (type === 'transactions') {
         const categoriesOrder = ['bank', 'e-wallet', 'e-money', 'cash', 'lainnya'];
         const groupedTransactions: Record<string, typeof transaksi> = {};
-  
+
         transaksi.forEach(t => {
           const monthYear = new Date(t.tanggal).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
           if (!groupedTransactions[monthYear]) groupedTransactions[monthYear] = [];
           groupedTransactions[monthYear].push(t);
         });
-  
+
         if (Object.keys(groupedTransactions).length === 0) {
           const emptySheet = workbook.addWorksheet('Data Kosong');
           emptySheet.getCell('A1').value = 'Tidak ada data transaksi';
           emptySheet.getCell('A1').font = { name: 'Times New Roman' };
         } else {
           Object.entries(groupedTransactions).forEach(([monthYear, monthTransactions]) => {
-            
+
             const sortedTrx = [...monthTransactions].sort((a, b) => {
               const dateA = new Date(a.tanggal).getTime();
               const dateB = new Date(b.tanggal).getTime();
@@ -498,57 +541,66 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
               }
               return dateA - dateB;
             });
-            
+
             const firstTrxInMonth = sortedTrx[0];
             const startOfMonth = new Date(
               new Date(firstTrxInMonth.tanggal).getFullYear(),
               new Date(firstTrxInMonth.tanggal).getMonth(),
               1
             ).getTime();
-  
+
             const activeTabungan = [...tabungan];
             const worksheet = workbook.addWorksheet(monthYear);
-            
+            const numToCol = (num: number) => {
+              let letter = '';
+              while (num > 0) {
+                const temp = (num - 1) % 26;
+                letter = String.fromCharCode(temp + 65) + letter;
+                num = (num - temp - 1) / 26;
+              }
+              return letter;
+            };
+
             const headerRow4: string[] = ['No', 'Tanggal'];
             const headerRow5: string[] = ['', ''];
-            
+
             const colMap: Record<string, { in: number; out: number; balance: number }> = {};
-            const catMap: Record<string, { balance: number; tabs: string[] }> = {}; 
-            const currencyColumns: number[] = []; 
+            const catMap: Record<string, { balance: number; tabs: string[] }> = {};
+            const currencyColumns: number[] = [];
             const mergesToApply: [number, number, number, number][] = [];
-            let currentCol = 3; 
-  
+            let currentCol = 3;
+
             categoriesOrder.forEach(cat => {
               const tabsInCat = activeTabungan.filter(t => getKategoriFromNama(t.nama) === cat);
               if (tabsInCat.length === 0) return;
-  
+
               catMap[cat] = { balance: 0, tabs: tabsInCat.map(t => t.id) };
-  
+
               tabsInCat.forEach(tab => {
                 headerRow4.push(tab.nama, '', '');
                 headerRow5.push('IN', 'OUT', 'Saldo');
                 mergesToApply.push([4, currentCol, 4, currentCol + 2]);
-                
+
                 colMap[tab.id] = { in: currentCol, out: currentCol + 1, balance: currentCol + 2 };
                 currencyColumns.push(currentCol, currentCol + 1, currentCol + 2);
                 currentCol += 3;
               });
-  
+
               const catLabel = cat.toUpperCase();
               headerRow4.push(`TOTAL ${catLabel}`);
               headerRow5.push('');
-              mergesToApply.push([4, currentCol, 5, currentCol]); 
+              mergesToApply.push([4, currentCol, 5, currentCol]);
               catMap[cat].balance = currentCol;
               currencyColumns.push(currentCol);
-              currentCol += 1; 
+              currentCol += 1;
             });
-  
+
             const totalColIndex = currentCol;
             const noteColIndex = currentCol + 1;
-            
+
             headerRow4.push('TOTAL KESELURUHAN', 'DESKRIPSI / CATATAN');
             headerRow5.push('', '');
-          
+
             mergesToApply.push([4, totalColIndex, 5, totalColIndex]);
             mergesToApply.push([4, noteColIndex, 5, noteColIndex]);
             currencyColumns.push(totalColIndex);
@@ -605,46 +657,59 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
                 }
               }
             }
-  
-            const runningBalances: Record<string, number> = {}; 
-            
-            activeTabungan.forEach(tab => { 
+
+            const runningBalances: Record<string, number> = {};
+
+            activeTabungan.forEach(tab => {
               let startBal = tab.saldoAwal || 0;
-              const pastTrx = transaksi.filter(t => t.tabunganId === tab.id && new Date(t.tanggal).getTime() < startOfMonth);
+              const pastTrx = transaksi.filter(t =>
+                (t.tabunganId === tab.id || t.tabunganTujuanId === tab.id) &&
+                new Date(t.tanggal).getTime() < startOfMonth
+              );
+              
               pastTrx.forEach(t => {
-                if (t.tipe === 'pemasukan') startBal += t.jumlah;
-                else startBal -= t.jumlah;
+                if (t.tipe === 'mutasi') {
+                  if (t.tabunganId === tab.id) {
+                    startBal -= (t.jumlah + (t.biayaAdmin || 0));
+                  }
+                  if (t.tabunganTujuanId === tab.id) {
+                    startBal += t.jumlah;
+                  }
+                } else {
+                  if (t.tipe === 'pemasukan') startBal += t.jumlah;
+                  else startBal -= t.jumlah;
+                }
               });
               runningBalances[tab.id] = startBal; 
             });
 
             const firstDayString = new Date(startOfMonth).toLocaleDateString('id-ID');
-            const initialRow = new Array(noteColIndex).fill('-'); 
-            initialRow[0] = 1; 
+            const initialRow = new Array(noteColIndex).fill('-');
+            initialRow[0] = 1;
             initialRow[1] = firstDayString;
             initialRow[noteColIndex - 1] = 'SALDO PINDAHAN BULAN LALU';
 
-            let initialGrandTotal = 0;
             Object.keys(catMap).forEach(cat => {
-              let catBal = 0;
+              const cellsToSum: string[] = [];
               catMap[cat].tabs.forEach(tabId => {
                 const b = runningBalances[tabId] || 0;
-                initialRow[colMap[tabId].balance - 1] = b; 
-                catBal += b;
+                initialRow[colMap[tabId].balance - 1] = b;
+                cellsToSum.push(`${numToCol(colMap[tabId].balance)}6`);
               });
-              initialRow[catMap[cat].balance - 1] = catBal;
-              initialGrandTotal += catBal;
+              initialRow[catMap[cat].balance - 1] = { formula: cellsToSum.length > 0 ? `SUM(${cellsToSum.join(',')})` : '0' };
             });
-            initialRow[totalColIndex - 1] = initialGrandTotal;
-            
+
+            const grandTotalCells = Object.keys(catMap).map(cat => `${numToCol(catMap[cat].balance)}6`);
+            initialRow[totalColIndex - 1] = { formula: grandTotalCells.length > 0 ? `SUM(${grandTotalCells.join(',')})` : '0' };
+
             const initialAddedRow = worksheet.addRow(initialRow);
-            
+
             initialAddedRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
               if (colNum <= noteColIndex) {
                 cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                 cell.alignment = { vertical: 'middle' };
                 cell.font = { italic: true, name: 'Times New Roman' };
-                
+
                 if (colNum === noteColIndex) cell.alignment.horizontal = 'center';
                 if (colNum === 1) {
                   cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } };
@@ -656,32 +721,51 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
             let lastDate = firstDayString;
             let startMergeRow = 6;
-            let currentRowIndex = 7; 
-  
+            let currentRowIndex = 7;
+
             sortedTrx.forEach((trx, index) => {
               const trxDate = new Date(trx.tanggal).toLocaleDateString('id-ID');
-              const row = new Array(noteColIndex).fill('-'); 
-              
-              row[0] = index + 2; 
-              
+              const row = new Array(noteColIndex).fill('-');
+
+              row[0] = index + 2;
+
               let desc = trx.judul;
               if (trx.deskripsi && trx.deskripsi.trim().toLowerCase() !== trx.judul.trim().toLowerCase()) {
                 desc += ` - ${trx.deskripsi}`;
               }
-              row[noteColIndex - 1] = desc; 
-  
+              row[noteColIndex - 1] = desc;
+
               if (trxDate !== lastDate) {
                 if (startMergeRow !== -1 && currentRowIndex - 1 > startMergeRow) {
                   worksheet.mergeCells(startMergeRow, 2, currentRowIndex - 1, 2);
                 }
                 lastDate = trxDate;
                 startMergeRow = currentRowIndex;
-                row[1] = trxDate; 
+                row[1] = trxDate;
               } else {
-                row[1] = ''; 
+                row[1] = '';
               }
-  
-              if (trx.tabunganId && colMap[trx.tabunganId]) {
+
+              if (trx.tipe === 'mutasi' && trx.tabunganId && trx.tabunganTujuanId) {
+                const colsAsal = colMap[trx.tabunganId];
+                const colsTujuan = colMap[trx.tabunganTujuanId];
+                const admin = trx.biayaAdmin || 0;
+
+                if (colsAsal) {
+                  row[colsAsal.out - 1] = trx.jumlah + admin;
+                  runningBalances[trx.tabunganId] -= (trx.jumlah + admin);
+                }
+                
+                if (colsTujuan) {
+                  row[colsTujuan.in - 1] = trx.jumlah;
+                  runningBalances[trx.tabunganTujuanId] += trx.jumlah;
+                }
+
+                if (admin > 0) {
+                  row[noteColIndex - 1] += ` (Biaya Admin: Rp ${admin.toLocaleString('id-ID')})`;
+                }
+                
+              } else if (trx.tabunganId && colMap[trx.tabunganId]) {
                 const cols = colMap[trx.tabunganId];
                 const amount = trx.jumlah;
                 if (trx.tipe === 'pemasukan') {
@@ -692,28 +776,31 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
                   runningBalances[trx.tabunganId] -= amount;
                 }
               }
-  
-              let grandTotal = 0;
+
               Object.keys(catMap).forEach(cat => {
-                let catBalance = 0;
+                const cellsToSum: string[] = [];
                 catMap[cat].tabs.forEach(tabId => {
-                  const b = runningBalances[tabId] || 0;
-                  row[colMap[tabId].balance - 1] = b; 
-                  catBalance += b;
+                  const cols = colMap[tabId];
+                  const colIn = numToCol(cols.in);
+                  const colOut = numToCol(cols.out);
+                  const colBal = numToCol(cols.balance);
+                  const prevRow = currentRowIndex - 1;
+                  const formulaBal = `${colBal}${prevRow} + IF(${colIn}${currentRowIndex}="-", 0, ${colIn}${currentRowIndex}) - IF(${colOut}${currentRowIndex}="-", 0, ${colOut}${currentRowIndex})`;
+                  row[cols.balance - 1] = { formula: formulaBal };
+                  cellsToSum.push(`${colBal}${currentRowIndex}`);
                 });
-                row[catMap[cat].balance - 1] = catBalance;
-                grandTotal += catBalance;
+                row[catMap[cat].balance - 1] = { formula: cellsToSum.length > 0 ? `SUM(${cellsToSum.join(',')})` : '0' };
               });
-  
-              row[totalColIndex - 1] = grandTotal;
-              
+              const grandTotalCells = Object.keys(catMap).map(cat => `${numToCol(catMap[cat].balance)}${currentRowIndex}`);
+              row[totalColIndex - 1] = { formula: grandTotalCells.length > 0 ? `SUM(${grandTotalCells.join(',')})` : '0' };
+
               const newRow = worksheet.addRow(row);
-              
+
               newRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
                 if (colNum <= noteColIndex) {
                   cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                   cell.alignment = { vertical: 'middle' };
-                  
+
                   if (colNum === 1 || colNum === 2 || colNum === noteColIndex) cell.alignment.horizontal = 'center';
                   if (colNum === 1) {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } };
@@ -724,7 +811,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
               currentRowIndex++;
             });
-  
+
             if (startMergeRow !== -1 && currentRowIndex - 1 > startMergeRow) {
               worksheet.mergeCells(startMergeRow, 2, currentRowIndex - 1, 2);
             }
@@ -739,10 +826,10 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
             currencyColumns.forEach(colIndex => {
               worksheet.getColumn(colIndex).numFmt = accountingFormat;
             });
-  
-            worksheet.getColumn(1).width = 5;  
-            worksheet.getColumn(2).width = 15; 
-            for(let i = 3; i < noteColIndex; i++) {
+
+            worksheet.getColumn(1).width = 5;
+            worksheet.getColumn(2).width = 15;
+            for (let i = 3; i < noteColIndex; i++) {
               worksheet.getColumn(i).width = 150 / 9;
             }
             worksheet.getColumn(noteColIndex).width = 35;
@@ -757,13 +844,13 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
           });
         }
-  
+
         const buffer = await workbook.xlsx.writeBuffer();
         const fileName = `Laporan_Transaksi_${new Date().toISOString().split('T')[0]}.xlsx`;
         saveAs(new Blob([buffer]), fileName);
       } else {
         const worksheet = workbook.addWorksheet('Tabungan');
-        
+
         worksheet.mergeCells('A1:C2');
         const titleCell = worksheet.getCell('A1');
         titleCell.value = 'DAFTAR TABUNGAN & SALDO';
@@ -772,7 +859,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
         const headers = ['Nama Dompet / Bank', 'Total Saldo Saat Ini', 'Tanggal Dibuat'];
         worksheet.getRow(4).values = headers;
-        
+
         const headerRow = worksheet.getRow(4);
         headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Times New Roman' };
         headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
@@ -781,10 +868,10 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
         tabungan.forEach(t => {
           const row = worksheet.addRow([
             t.nama,
-            t.jumlah, 
+            t.jumlah,
             new Date(t.createdAt).toLocaleDateString('id-ID')
           ]);
-          row.border = { top: { style:'thin' }, bottom: { style:'thin' }, left: { style:'thin' }, right: { style:'thin' }};
+          row.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
         });
 
         worksheet.getColumn(2).numFmt = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)';
@@ -803,63 +890,63 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
         const fileName = `Laporan_Tabungan_${new Date().toISOString().split('T')[0]}.xlsx`;
         saveAs(new Blob([buffer]), fileName);
       }
-  
+
     } catch (error) {
       console.error(`❌ Failed to export ${type}:`, error);
       throw error;
     }
   };
 
-// const importData = async (file: File) => {
-//   return new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.onload = async (e) => {
-//       try {
-//         const data = e.target?.result;
-//         const workbook = XLSX.read(data, { type: 'binary' });
-//         const sheetName = workbook.SheetNames[0];
-//         const worksheet = workbook.Sheets[sheetName];
-//         const jsonData = XLSX.utils.sheet_to_json(worksheet);
+  // const importData = async (file: File) => {
+  //   return new Promise((resolve, reject) => {
+  //     const reader = new FileReader();
+  //     reader.onload = async (e) => {
+  //       try {
+  //         const data = e.target?.result;
+  //         const workbook = XLSX.read(data, { type: 'binary' });
+  //         const sheetName = workbook.SheetNames[0];
+  //         const worksheet = workbook.Sheets[sheetName];
+  //         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-//         const importedTransactions: TransaksiData[] = [];
-//         for (const row of jsonData as any[]) {
-//           if (row.Tanggal && row.Jumlah && row.Tipe) {
-//             const newTransaction: TransaksiData = {
-//               id: crypto.randomUUID(),
-//               judul: row.Judul || 'Transaksi Import',
-//               jumlah: parseFloat(row.Jumlah),
-//               deskripsi: row.Keterangan || null,
-//               tanggal: new Date(row.Tanggal).toISOString().split('T')[0],
-//               tipe: row.Tipe,
-//               tabunganId: tabungan.find(t => t.nama === row.Tabungan)?.id || null,
-//               kategoriId: null,
-//               createdAt: new Date(),
-//               updatedAt: new Date()
-//             };
-//             importedTransactions.push(newTransaction);
-//           }
-//         }
-        
-//         const updatedTransaksi = [...importedTransactions, ...transaksi];
-//         setTransaksi(updatedTransaksi);
-//         await updateData(tabungan, updatedTransaksi);
+  //         const importedTransactions: TransaksiData[] = [];
+  //         for (const row of jsonData as any[]) {
+  //           if (row.Tanggal && row.Jumlah && row.Tipe) {
+  //             const newTransaction: TransaksiData = {
+  //               id: crypto.randomUUID(),
+  //               judul: row.Judul || 'Transaksi Import',
+  //               jumlah: parseFloat(row.Jumlah),
+  //               deskripsi: row.Keterangan || null,
+  //               tanggal: new Date(row.Tanggal).toISOString().split('T')[0],
+  //               tipe: row.Tipe,
+  //               tabunganId: tabungan.find(t => t.nama === row.Tabungan)?.id || null,
+  //               kategoriId: null,
+  //               createdAt: new Date(),
+  //               updatedAt: new Date()
+  //             };
+  //             importedTransactions.push(newTransaction);
+  //           }
+  //         }
 
-//         importedTransactions.forEach(item => {
-//           syncToCloud('transaksi', item);
-//         });
+  //         const updatedTransaksi = [...importedTransactions, ...transaksi];
+  //         setTransaksi(updatedTransaksi);
+  //         await updateData(tabungan, updatedTransaksi);
 
-//         setLastSync(new Date());
-//         console.log(`✅ ${importedTransactions.length} transactions imported successfully`);
-//         resolve(importedTransactions);
-//       } catch (error) {
-//         console.error('❌ Failed to import data:', error);
-//         reject(error);
-//       }
-//     };
-//     reader.onerror = () => reject(new Error('Gagal membaca file'));
-//     reader.readAsBinaryString(file);
-//   });
-// };
+  //         importedTransactions.forEach(item => {
+  //           syncToCloud('transaksi', item);
+  //         });
+
+  //         setLastSync(new Date());
+  //         console.log(`✅ ${importedTransactions.length} transactions imported successfully`);
+  //         resolve(importedTransactions);
+  //       } catch (error) {
+  //         console.error('❌ Failed to import data:', error);
+  //         reject(error);
+  //       }
+  //     };
+  //     reader.onerror = () => reject(new Error('Gagal membaca file'));
+  //     reader.readAsBinaryString(file);
+  //   });
+  // };
 
   return (
     <FinancialContext.Provider value={{

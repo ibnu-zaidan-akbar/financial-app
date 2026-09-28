@@ -55,6 +55,9 @@ interface TransaksiInterface {
   tanggal: string | Date;
   tipe: string;
   kategoriId?: string | null;
+  tabunganId?: string | null;
+  tabunganTujuanId?: string | null;
+  biayaAdmin?: number | null;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -184,14 +187,19 @@ export default function DashboardTab({ tabungan, transaksi, onDataUpdate, canIns
         .reduce((sum, t) => sum + t.jumlah, 0);
         
       const pengeluaran = transaksi
-        .filter(t => t.tipe === 'pengeluaran')
+        .filter(t => t.tipe === 'pengeluaran' || t.tipe === 'mutasi')
         .filter(t => {
           const tDate = new Date(t.tanggal);
           return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
         })
-        .reduce((sum, t) => sum + t.jumlah, 0);
+        .reduce((sum, t) => {
+          if (t.tipe === 'mutasi') {
+            return sum + (t.biayaAdmin || 0);
+          }
+          return sum + t.jumlah;
+        }, 0);
 
-      const last6Months:any[] = [];
+      const last6Months: any[] = [];
       for (let i = 5; i >= 0; i--) {
         const d = new Date(currentYear, currentMonth - i, 1);
         const monthName = d.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
@@ -213,8 +221,10 @@ export default function DashboardTab({ tabungan, transaksi, onDataUpdate, canIns
         if (targetMonth) {
           if (t.tipe === 'pemasukan') {
             targetMonth.pemasukan += t.jumlah;
-          } else {
+          } else if (t.tipe === 'pengeluaran') {
             targetMonth.pengeluaran += t.jumlah;
+          } else if (t.tipe === 'mutasi' && t.biayaAdmin) {
+            targetMonth.pengeluaran += t.biayaAdmin;
           }
         }
       });
@@ -374,7 +384,11 @@ export default function DashboardTab({ tabungan, transaksi, onDataUpdate, canIns
               }).format(pengeluaranBulanIni)}
             </div>
             <p className="text-xs text-red-600 mt-1">
-              {transaksi.filter(t => t.tipe === 'pengeluaran' && new Date(t.tanggal).getMonth() === new Date().getMonth() && new Date(t.tanggal).getFullYear() === new Date().getFullYear()).length} transaksi
+              {transaksi.filter(t => 
+                (t.tipe === 'pengeluaran' || (t.tipe === 'mutasi' && (t.biayaAdmin || 0) > 0)) && 
+                new Date(t.tanggal).getMonth() === new Date().getMonth() && 
+                new Date(t.tanggal).getFullYear() === new Date().getFullYear()
+              ).length} transaksi
             </p>
           </CardContent>
         </Card>
