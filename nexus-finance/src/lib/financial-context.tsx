@@ -822,7 +822,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
             titleCell.font = { size: 16, bold: true, name: 'Times New Roman' };
             titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-            const accountingFormat = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)';
+            const accountingFormat = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "0"_);_(@_)';
             currencyColumns.forEach(colIndex => {
               worksheet.getColumn(colIndex).numFmt = accountingFormat;
             });
