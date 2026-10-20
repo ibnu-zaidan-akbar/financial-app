@@ -684,7 +684,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
             });
 
             const firstDayString = new Date(startOfMonth).toLocaleDateString('id-ID');
-            const initialRow = new Array(noteColIndex).fill('-');
+            const initialRow = new Array(noteColIndex).fill('0');
             initialRow[0] = 1;
             initialRow[1] = firstDayString;
             initialRow[noteColIndex - 1] = 'SALDO PINDAHAN BULAN LALU';
@@ -725,7 +725,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
             sortedTrx.forEach((trx, index) => {
               const trxDate = new Date(trx.tanggal).toLocaleDateString('id-ID');
-              const row = new Array(noteColIndex).fill('-');
+              const row = new Array(noteColIndex).fill('0');
 
               row[0] = index + 2;
 
