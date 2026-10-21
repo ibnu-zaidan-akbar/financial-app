@@ -684,7 +684,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
             });
 
             const firstDayString = new Date(startOfMonth).toLocaleDateString('id-ID');
-            const initialRow = new Array(noteColIndex).fill('-');
+            const initialRow = new Array(noteColIndex).fill(0);
             initialRow[0] = 1;
             initialRow[1] = firstDayString;
             initialRow[noteColIndex - 1] = 'SALDO PINDAHAN BULAN LALU';
@@ -725,7 +725,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
             sortedTrx.forEach((trx, index) => {
               const trxDate = new Date(trx.tanggal).toLocaleDateString('id-ID');
-              const row = new Array(noteColIndex).fill('-');
+              const row = new Array(noteColIndex).fill(0);
 
               row[0] = index + 2;
 
@@ -785,7 +785,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
                   const colOut = numToCol(cols.out);
                   const colBal = numToCol(cols.balance);
                   const prevRow = currentRowIndex - 1;
-                  const formulaBal = `${colBal}${prevRow} + IF(${colIn}${currentRowIndex}="-", 0, ${colIn}${currentRowIndex}) - IF(${colOut}${currentRowIndex}="-", 0, ${colOut}${currentRowIndex})`;
+                  const formulaBal = `${colBal}${prevRow} + ${colIn}${currentRowIndex} - ${colOut}${currentRowIndex}`;
                   row[cols.balance - 1] = { formula: formulaBal };
                   cellsToSum.push(`${colBal}${currentRowIndex}`);
                 });
@@ -822,7 +822,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
             titleCell.font = { size: 16, bold: true, name: 'Times New Roman' };
             titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-            const accountingFormat = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)';
+            const accountingFormat = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "0"_);_(@_)';
             currencyColumns.forEach(colIndex => {
               worksheet.getColumn(colIndex).numFmt = accountingFormat;
             });
@@ -874,7 +874,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
           row.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
         });
 
-        worksheet.getColumn(2).numFmt = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)';
+        worksheet.getColumn(2).numFmt = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "0"_);_(@_)';
         worksheet.getColumn(1).width = 25;
         worksheet.getColumn(2).width = 25;
         worksheet.getColumn(3).width = 15;
