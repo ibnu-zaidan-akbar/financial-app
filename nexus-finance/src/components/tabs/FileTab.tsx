@@ -105,7 +105,7 @@ export default function FileTab() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> */}
               <Button
                 onClick={() => setShowExportDialog(true)}
                 disabled={transaksi.length === 0}
@@ -117,20 +117,7 @@ export default function FileTab() {
                   {transaksi.length} transaksi • {tabungan.length} tabungan
                 </span>
               </Button>
-              
-              <Button
-                onClick={() => setShowExportDialog(true)}
-                disabled={transaksi.length === 0}
-                variant="outline"
-                className="h-20 flex-col gap-2"
-              >
-                <Settings className="h-6 w-6" />
-                <span>Pilih Format Export</span>
-                <span className="text-xs text-gray-500">
-                  Export ke format .xlsx
-                </span>
-              </Button>
-            </div>
+            {/* </div> */}
             
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-medium text-blue-800 mb-2">Fitur Export:</h4>

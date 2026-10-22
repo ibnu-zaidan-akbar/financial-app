@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { syncTransaksiToCloud, syncTabunganToCloud, getFinancialData, deleteTabunganFromCloud, deleteTransaksiFromCloud } from '@/app/actions';
+import { syncTransaksiToCloud, syncTabunganToCloud, getFinancialData, deleteTabunganFromCloud, deleteTransaksiFromCloud, deleteTabunganWithTransactionsFromCloud } from '@/app/actions';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
@@ -331,6 +331,43 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       setTabungan(oldData);
+      throw error;
+    }
+
+    const relatedTransactions = transaksi.filter(t => t.tabunganId === id || t.tabunganTujuanId === id);
+    if (relatedTransactions.length > 0) {
+      const today = new Date();
+      const isYearEnd = today.getMonth() === 11 && (today.getDate() === 30 || today.getDate() === 31);
+
+      if (!isYearEnd) {
+        throw new Error("⚠️ Gagal: Tabungan ini memiliki riwayat transaksi. Penghapusan hanya diizinkan pada masa Tutup Buku (30-31 Desember) untuk mencegah kerusakan laporan tahunan.");
+      }
+    }
+
+    const oldTabungan = [...tabungan];
+    const oldTransaksi = [...transaksi];
+    const newTabunganList = oldTabungan.filter((t) => t.id !== id);
+    const newTransaksiList = relatedTransactions.length > 0 
+      ? oldTransaksi.filter(t => t.tabunganId !== id && t.tabunganTujuanId !== id)
+      : oldTransaksi;
+
+    setTabungan(newTabunganList);
+    setTransaksi(newTransaksiList);
+
+    try {
+      await updateData(newTabunganList, newTransaksiList);
+      
+      if (status === 'authenticated') {
+        if (relatedTransactions.length > 0) {
+          await deleteTabunganWithTransactionsFromCloud(userId, id);
+        } else {
+          await deleteTabunganFromCloud(userId, id);
+        }
+        await fetchFromCloud(userId);
+      }
+    } catch (error) {
+      setTabungan(oldTabungan);
+      setTransaksi(oldTransaksi);
       throw error;
     }
   };
