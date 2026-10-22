@@ -105,17 +105,17 @@ export default function FileTab() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-              <Button
-                onClick={() => setShowExportDialog(true)}
-                disabled={transaksi.length === 0}
-                className="w-full h-20 flex-col gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <FileSpreadsheet className="h-6 w-6" />
-                <span>Export Laporan Keuangan</span>
-                <span className="text-xs text-blue-100">
-                  {transaksi.length} transaksi • {tabungan.length} tabungan
-                </span>
-              </Button>
+            <Button
+              onClick={() => setShowExportDialog(true)}
+              disabled={transaksi.length === 0}
+              className="w-full h-20 flex-col gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <FileSpreadsheet className="h-6 w-6" />
+              <span>Export Laporan Keuangan</span>
+              <span className="text-xs text-blue-100">
+                {transaksi.length} transaksi • {tabungan.length} tabungan
+              </span>
+            </Button>
             
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-medium text-blue-800 mb-2">Fitur Export:</h4>
