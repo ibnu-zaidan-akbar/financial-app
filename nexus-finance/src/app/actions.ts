@@ -85,3 +85,24 @@ export async function deleteTransaksiFromCloud(userId: string, id: string) {
     throw error;
   }
 }
+
+export async function deleteTabunganWithTransactionsFromCloud(userId: string, tabunganId: string) {
+  try {
+    await prisma.transaksi.deleteMany({
+      where: {
+        userId: userId,
+        OR: [
+          { tabunganId: tabunganId },
+          { tabunganTujuanId: tabunganId }
+        ]
+      }
+    });
+
+    return await prisma.tabungan.delete({
+      where: { id: tabunganId, userId: userId }
+    });
+  } catch (error) {
+    console.error("Gagal menghapus tabungan beserta transaksinya di Cloud:", error);
+    throw error;
+  }
+}
