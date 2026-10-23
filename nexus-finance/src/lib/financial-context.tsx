@@ -563,13 +563,55 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
           groupedTransactions[monthYear].push(t);
         });
 
+        const summarySheet = workbook.addWorksheet('Total Saldo');
+
+        summarySheet.mergeCells('A1:C2');
+        const summaryTitleCell = summarySheet.getCell('A1');
+        summaryTitleCell.value = 'DAFTAR TABUNGAN & TOTAL SALDO';
+        summaryTitleCell.font = { size: 16, bold: true, name: 'Times New Roman' };
+        summaryTitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        const summaryHeaders = ['Nama Dompet / Bank', 'Total Saldo Saat Ini', 'Tanggal Dibuat'];
+        summarySheet.getRow(4).values = summaryHeaders;
+
+        const summaryHeaderRow = summarySheet.getRow(4);
+        summaryHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Times New Roman' };
+        summaryHeaderRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+        summaryHeaderRow.alignment = { horizontal: 'center' };
+
+        tabungan.forEach(t => {
+          const row = summarySheet.addRow([
+            t.nama,
+            t.jumlah,
+            new Date(t.createdAt).toLocaleDateString('id-ID')
+          ]);
+          row.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
+        summarySheet.getColumn(2).numFmt = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "0"_);_(@_)';
+        summarySheet.getColumn(1).width = 25;
+        summarySheet.getColumn(2).width = 25;
+        summarySheet.getColumn(3).width = 15;
+
+        summarySheet.eachRow({ includeEmpty: true }, (row) => {
+          row.eachCell({ includeEmpty: true }, (cell) => {
+            const currentFont = cell.font || {};
+            cell.font = { ...currentFont, name: 'Times New Roman' };
+          });
+        });
+
         if (Object.keys(groupedTransactions).length === 0) {
           const emptySheet = workbook.addWorksheet('Data Kosong');
           emptySheet.getCell('A1').value = 'Tidak ada data transaksi';
           emptySheet.getCell('A1').font = { name: 'Times New Roman' };
         } else {
-          Object.entries(groupedTransactions).forEach(([monthYear, monthTransactions]) => {
+          const sortedMonthEntries = Object.entries(groupedTransactions).sort(([, trxA], [, trxB]) => {
+            const dateA = new Date(trxA[0].tanggal).getTime();
+            const dateB = new Date(trxB[0].tanggal).getTime();
+            return dateB - dateA;
+          });
 
+          sortedMonthEntries.forEach(([monthYear, monthTransactions]) => {
             const sortedTrx = [...monthTransactions].sort((a, b) => {
               const dateA = new Date(a.tanggal).getTime();
               const dateB = new Date(b.tanggal).getTime();
