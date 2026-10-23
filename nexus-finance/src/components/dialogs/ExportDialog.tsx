@@ -10,14 +10,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { 
   Download, 
   FileSpreadsheet,
-  Calendar,
-  Settings,
   CheckCircle,
-  Info
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,122 +26,80 @@ interface ExportDialogProps {
 
 export function ExportDialog({ open, onOpenChange, onExport }: ExportDialogProps) {
   const [isExporting, setIsExporting] = useState(false);
-  const [exportType, setExportType] = useState<'transactions' | 'savings' | ''>('');
 
-  const handleExportClick = async (type: 'transactions' | 'savings') => {
+  const handleExportClick = async () => {
     setIsExporting(true);
-    setExportType(type);
     
     try {
-      await onExport(type);
-      toast.success(`Export ${type === 'savings' ? 'Tabungan' : 'Transaksi'} berhasil!`);
+      await onExport('transactions');
+      toast.success('Laporan Keuangan berhasil di-export!');
       onOpenChange(false);
     } catch (error) {
       console.error('Export error:', error);
-      toast.error(`Export ${type === 'savings' ? 'Tabungan' : 'Transaksi'} gagal. Silakan coba lagi.`);
+      toast.error('Export Laporan Keuangan gagal. Silakan coba lagi.');
     } finally {
       setIsExporting(false);
-      setExportType('');
     }
   };
 
-  const exportOptions = [
-    {
-      id: 'transactions' as const,
-      title: 'Laporan Keuangan',
-      description: 'Export semua transaksi',
-      icon: FileSpreadsheet,
-      color: 'blue',
-      features: [
-        'Export semua transaksi',
-        'Deskripsi dari input user',
-        'Nama tabungan tercantum',
-        'Format: .xlsx (Excel Compatible)'
-      ]
-    },
-    {
-      id: 'savings' as const,
-      title: 'Laporan Tabungan',
-      description: 'Export data tabungan dan saldonya',
-      icon: Calendar,
-      color: 'green',
-      features: [
-        'Nama tabungan',
-        'Saldo terkini',
-        'Tanggal pembuatan',
-        'Format: .xlsx (Excel Compatible)'
-      ]
-    }
+  const features = [
+    'Tab 1: Ringkasan Total Saldo & Semua Dompet',
+    'Tab Bulanan: Transaksi detail (Pemasukan, Pengeluaran, & Mutasi)',
+    'Rumus Otomatis Excel untuk perhitungan saldo',
+    'Format .xlsx (Kompatibel dengan Microsoft Excel / Google Sheets)'
   ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
             Export Data ke Excel
           </DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {exportOptions.map((option) => {
-              const Icon = option.icon;
-              const isLoading = isExporting && exportType === option.id;
-              
-              return (
-                <Card key={option.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg bg-${option.color}-100`}>
-                          <Icon className={`h-6 w-6 text-${option.color}-600`} />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold">{option.title}</h3>
-                          <p className="text-sm text-gray-600">{option.description}</p>
-                        </div>
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium">Fitur:</div>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                          {option.features.map((feature, index) => (
-                            <li key={index} className="flex items-center gap-2">
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                              {feature}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      <Button
-                        onClick={() => handleExportClick(option.id)}
-                        disabled={isLoading}
-                        className={`w-full bg-${option.color}-600 hover:bg-${option.color}-700`}
-                      >
-                        {isLoading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                            Exporting...
-                          </>
-                        ) : (
-                          <>
-                            <Download className="h-4 w-4 mr-2" />
-                            Export {option.title}
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
 
+        <div className="space-y-4">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-5 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-blue-100 text-blue-600">
+                  <FileSpreadsheet className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Laporan Lengkap</h3>
+                  <p className="text-xs text-gray-500">Gabungan Saldo Tabungan & Riwayat Transaksi</p>
+                </div>
+              </div>
+                    
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <div className="text-xs font-semibold text-gray-700">Isi File Excel:</div>
+                <ul className="text-xs text-gray-600 space-y-2">
+                  {features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <Button onClick={handleExportClick} disabled={isExporting} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium">
+                {isExporting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Memproses Excel...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Laporan (.xlsx)
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        
           <div className="bg-blue-50 p-4 rounded-lg">
             <div className="flex items-start gap-3">
               <Info className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -168,10 +123,6 @@ export function ExportDialog({ open, onOpenChange, onExport }: ExportDialogProps
             <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
               <FileSpreadsheet className="h-3 w-3 mr-1" />
               Excel Format
-            </Badge>
-            <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
-              <Settings className="h-3 w-3 mr-1" />
-              Client-Side Processing
             </Badge>
           </div>
         </div>

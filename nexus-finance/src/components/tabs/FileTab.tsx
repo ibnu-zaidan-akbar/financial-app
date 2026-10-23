@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Download, Upload, Database, FileSpreadsheet, Settings } from 'lucide-react';
+import { Download, Upload, Database, FileSpreadsheet } from 'lucide-react';
 import { ExportDialog } from '@/components/dialogs/ExportDialog';
 import { ImportDialog } from '@/components/dialogs/ImportDialog';
 import { useFinancial } from '@/lib/financial-context';
@@ -25,7 +24,7 @@ export default function FileTab() {
   const handleExport = async (type: 'transactions' | 'savings') => {
     try {
       await exportData(type);
-      toast.success(`Data ${type === 'savings' ? 'Tabungan' : 'Transaksi'} berhasil di-export!`);
+      toast.success('Laporan Keuangan berhasil di-export!');
     } catch (error) {
       console.error('Export failed:', error);
       toast.error('Export gagal. Silakan coba lagi.');
