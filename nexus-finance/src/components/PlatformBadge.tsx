@@ -131,16 +131,6 @@ export default function PlatformBadge({
           {getPlatformIcon()}
           <span className="text-xs font-medium">{platform.toUpperCase()}</span>
         </Badge>
-        
-        <Badge className={`${getBrowserColor()} flex items-center gap-1`}>
-          {getBrowserIcon()}
-          <span className="text-xs font-medium">{browser.toUpperCase()}</span>
-        </Badge>
-        
-        <Badge className={`${getPWAStatusColor()} flex items-center gap-1`}>
-          {getPWAIcon()}
-          <span className="text-xs font-medium">{getPWAStatusText()}</span>
-        </Badge>
       </div>
     );
   }
