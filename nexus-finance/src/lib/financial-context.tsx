@@ -645,7 +645,8 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
             const colMap: Record<string, { in: number; out: number; balance: number }> = {};
             const catMap: Record<string, { balance: number; tabs: string[] }> = {};
-            const currencyColumns: number[] = [];
+            const inOutColumns: number[] = [];
+            const balanceColumns: number[] = [];
             const mergesToApply: [number, number, number, number][] = [];
             let currentCol = 3;
 
@@ -661,7 +662,8 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
                 mergesToApply.push([4, currentCol, 4, currentCol + 2]);
 
                 colMap[tab.id] = { in: currentCol, out: currentCol + 1, balance: currentCol + 2 };
-                currencyColumns.push(currentCol, currentCol + 1, currentCol + 2);
+                inOutColumns.push(currentCol, currentCol + 1);
+                balanceColumns.push(currentCol + 2);
                 currentCol += 3;
               });
 
@@ -670,7 +672,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
               headerRow5.push('');
               mergesToApply.push([4, currentCol, 5, currentCol]);
               catMap[cat].balance = currentCol;
-              currencyColumns.push(currentCol);
+              balanceColumns.push(currentCol);
               currentCol += 1;
             });
 
@@ -682,7 +684,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
             mergesToApply.push([4, totalColIndex, 5, totalColIndex]);
             mergesToApply.push([4, noteColIndex, 5, noteColIndex]);
-            currencyColumns.push(totalColIndex);
+            balanceColumns.push(totalColIndex);
 
             worksheet.getRow(4).values = headerRow4;
             worksheet.getRow(5).values = headerRow5;
@@ -901,9 +903,15 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
             titleCell.font = { size: 16, bold: true, name: 'Times New Roman' };
             titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-            const accountingFormat = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "0"_);_(@_)';
-            currencyColumns.forEach(colIndex => {
-              worksheet.getColumn(colIndex).numFmt = accountingFormat;
+            const formatInOut = '_("Rp"* #,##0_);_("Rp"* (#,##0);"-";_(@_)';
+            const formatSaldo = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "0"_);_(@_)';
+
+            inOutColumns.forEach(colIndex => {
+              worksheet.getColumn(colIndex).numFmt = formatInOut;
+            });
+
+            balanceColumns.forEach(colIndex => {
+              worksheet.getColumn(colIndex).numFmt = formatSaldo;
             });
 
             worksheet.getColumn(1).width = 5;
