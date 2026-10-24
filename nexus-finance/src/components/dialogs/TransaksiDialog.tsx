@@ -11,6 +11,7 @@ import { useFinancial } from '@/lib/financial-context';
 import { 
   ArrowUpRight, 
   ArrowDownRight,
+  ArrowRightLeft,
   Calendar,
   DollarSign,
   Wallet,
@@ -39,10 +40,12 @@ interface TransaksiDialogProps {
 export default function TransaksiDialog({ open, onOpenChange, tabungan }: TransaksiDialogProps) {
   const { createTransaksi } = useFinancial();
   const [formData, setFormData] = useState({
-    tipe: 'pemasukan' as 'pemasukan' | 'pengeluaran',
+    tipe: 'pemasukan' as 'pemasukan' | 'pengeluaran' | 'mutasi',
     jumlah: '',
     deskripsi: '',
     tabunganId: '',
+    tabunganTujuanId: '',
+    biayaAdmin: '',
     tanggal: new Date().toISOString().split('T')[0]
   });
 
@@ -84,30 +87,38 @@ export default function TransaksiDialog({ open, onOpenChange, tabungan }: Transa
     }
   };
 
-  const getFilteredTabungan = () => {
-    return tabungan;
-  };
-
   const resetForm = () => {
     setFormData({
       tipe: 'pemasukan',
       jumlah: '',
       deskripsi: '',
       tabunganId: '',
+      tabunganTujuanId: '',
+      biayaAdmin: '',
       tanggal: new Date().toISOString().split('T')[0]
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!formData.tipe || !formData.jumlah || !formData.tabunganId || !formData.tanggal) {
       toast.error('Mohon lengkapi semua field yang wajib diisi');
       return;
     }
 
+    if (formData.tipe === 'mutasi') {
+      if (!formData.tabunganTujuanId) {
+        toast.error('Pilih tabungan tujuan untuk mutasi');
+        return;
+      }
+      if (formData.tabunganId === formData.tabunganTujuanId) {
+        toast.error('Sumber dan tujuan tabungan tidak boleh sama');
+        return;
+      }
+    }
+
     try {
-      const selectedTabungan = tabungan.find(t => t.id! === formData.tabunganId);
+      const selectedTabungan = tabungan.find(t => t.id === formData.tabunganId);
       if (!selectedTabungan) {
         toast.error('Tabungan tidak ditemukan');
         return;
@@ -115,8 +126,10 @@ export default function TransaksiDialog({ open, onOpenChange, tabungan }: Transa
       
       await createTransaksi({
         tabunganId: selectedTabungan.id,
-        judul: formData.deskripsi || (formData.tipe === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'),
+        tabunganTujuanId: formData.tipe === 'mutasi' ? formData.tabunganTujuanId : null,
+        judul: formData.deskripsi || (formData.tipe === 'pemasukan' ? 'Pemasukan' : formData.tipe === 'mutasi' ? 'Transfer' : 'Pengeluaran'),
         jumlah: parseFloat(formData.jumlah.replace(/\./g, '')),
+        biayaAdmin: formData.tipe === 'mutasi' && formData.biayaAdmin ? parseFloat(formData.biayaAdmin.replace(/\./g, '')) : 0,
         deskripsi: formData.deskripsi || '',
         tipe: formData.tipe,
         tanggal: formData.tanggal,
@@ -142,7 +155,7 @@ export default function TransaksiDialog({ open, onOpenChange, tabungan }: Transa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {formData.tipe === 'pemasukan' ? (
@@ -150,23 +163,23 @@ export default function TransaksiDialog({ open, onOpenChange, tabungan }: Transa
             ) : formData.tipe === 'pengeluaran' ? (
               <ArrowDownRight className="h-5 w-5 text-red-600" />
             ) : (
-              <DollarSign className="h-5 w-5" />
+              <ArrowRightLeft className="h-5 w-5 text-blue-600" />
             )}
             Tambah Transaksi
           </DialogTitle>
           <DialogDescription>
-            Tambahkan pemasukan atau pengeluaran untuk tabungan Anda
+            {formData.tipe === 'mutasi' ? 'Transfer saldo antar tabungan' : 'Tambahkan pemasukan atau pengeluaran untuk tabungan Anda'}
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Jenis Transaksi *</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 type="button"
                 variant={formData.tipe === 'pemasukan' ? 'default' : 'outline'}
-                className={`h-16 flex-col gap-2 ${
+                className={`h-16 flex-col gap-1 px-1 ${
                   formData.tipe === 'pemasukan' 
                     ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
                     : 'border-green-200 text-green-700 hover:bg-green-50'
@@ -174,13 +187,13 @@ export default function TransaksiDialog({ open, onOpenChange, tabungan }: Transa
                 onClick={() => setFormData({...formData, tipe: 'pemasukan'})}
               >
                 <ArrowUpRight className="h-5 w-5" />
-                <span className="text-sm">Pemasukan</span>
+                <span className="text-xs font-medium">Pemasukan</span>
               </Button>
               
               <Button
                 type="button"
                 variant={formData.tipe === 'pengeluaran' ? 'default' : 'outline'}
-                className={`h-16 flex-col gap-2 ${
+                className={`h-16 flex-col gap-1 px-1 ${
                   formData.tipe === 'pengeluaran' 
                     ? 'bg-red-600 hover:bg-red-700 text-white border-red-600' 
                     : 'border-red-200 text-red-700 hover:bg-red-50'
@@ -188,13 +201,27 @@ export default function TransaksiDialog({ open, onOpenChange, tabungan }: Transa
                 onClick={() => setFormData({...formData, tipe: 'pengeluaran'})}
               >
                 <ArrowDownRight className="h-5 w-5" />
-                <span className="text-sm">Pengeluaran</span>
+                <span className="text-xs font-medium">Pengeluaran</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.tipe === 'mutasi' ? 'default' : 'outline'}
+                className={`h-16 flex-col gap-1 px-1 ${
+                  formData.tipe === 'mutasi' 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' 
+                    : 'border-blue-200 text-blue-700 hover:bg-blue-50'
+                }`}
+                onClick={() => setFormData({...formData, tipe: 'mutasi'})}
+              >
+                <ArrowRightLeft className="h-5 w-5" />
+                <span className="text-xs font-medium">Mutasi</span>
               </Button>
             </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">Jumlah *</label>
+            <label className="text-sm font-medium mb-2 block">Jumlah Nominal *</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
                 Rp
@@ -208,31 +235,52 @@ export default function TransaksiDialog({ open, onOpenChange, tabungan }: Transa
                   const formatted = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                   setFormData({...formData, jumlah: formatted});
                 }}
-                className="pl-12"
+                className="pl-12 text-lg font-semibold"
                 required
               />
             </div>
           </div>
 
+          {formData.tipe === 'mutasi' && (
+            <div>
+              <label className="text-sm font-medium mb-2 block text-gray-600">Biaya Admin (Opsional)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                  Rp
+                </span>
+                <Input
+                  type="text"
+                  placeholder="0"
+                  value={formData.biayaAdmin}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    const formatted = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                    setFormData({...formData, biayaAdmin: formatted});
+                  }}
+                  className="pl-10 text-sm"
+                />
+              </div>
+            </div>
+          )}
+
           <div>
-            <label className="text-sm font-medium mb-2 block">Sumber/Tujuan *</label>
+            <label className="text-sm font-medium mb-2 block">
+              {formData.tipe === 'mutasi' ? 'Dari Tabungan (Sumber) *' : 'Sumber/Tujuan *'}
+            </label>
             <Select value={formData.tabunganId} onValueChange={(value) => setFormData({...formData, tabunganId: value})}>
               <SelectTrigger>
                 <SelectValue placeholder="Pilih tabungan" />
               </SelectTrigger>
               <SelectContent>
-                {getFilteredTabungan().map((t) => {
+                {tabungan.map((t) => {
                   const kategori = getKategoriFromNama(t.nama);
                   return (
-                    <SelectItem key={t.id} value={t.id!.toString()}>
+                    <SelectItem key={t.id} value={t.id.toString()}>
                       <div className="flex items-center gap-2">
                         <div className={`p-1 rounded ${getKategoriColor(kategori)}`}>
                           {getKategoriIcon(kategori)}
                         </div>
                         <span>{t.nama}</span>
-                        <Badge variant="outline" className={`text-xs ml-auto ${getKategoriColor(kategori)}`}>
-                          {kategori.toUpperCase()}
-                        </Badge>
                       </div>
                     </SelectItem>
                   );
@@ -240,6 +288,34 @@ export default function TransaksiDialog({ open, onOpenChange, tabungan }: Transa
               </SelectContent>
             </Select>
           </div>
+
+          {formData.tipe === 'mutasi' && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">Ke Tabungan (Tujuan) *</label>
+              <Select value={formData.tabunganTujuanId} onValueChange={(value) => setFormData({...formData, tabunganTujuanId: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih tabungan tujuan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tabungan
+                    .filter(t => t.id.toString() !== formData.tabunganId)
+                    .map((t) => {
+                    const kategori = getKategoriFromNama(t.nama);
+                    return (
+                      <SelectItem key={t.id} value={t.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <div className={`p-1 rounded ${getKategoriColor(kategori)}`}>
+                            {getKategoriIcon(kategori)}
+                          </div>
+                          <span>{t.nama}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <label className="text-sm font-medium mb-2 block">Tanggal *</label>
@@ -258,10 +334,10 @@ export default function TransaksiDialog({ open, onOpenChange, tabungan }: Transa
           <div>
             <label className="text-sm font-medium mb-2 block">Keterangan</label>
             <Textarea
-              placeholder="Tambahkan keterangan transaksi (opsional)"
+              placeholder={formData.tipe === 'mutasi' ? "Contoh: Top up OVO, Tarik tunai, dll" : "Tambahkan keterangan transaksi (opsional)"}
               value={formData.deskripsi}
               onChange={(e) => setFormData({...formData, deskripsi: e.target.value})}
-              rows={3}
+              rows={2}
             />
           </div>
 
@@ -269,40 +345,53 @@ export default function TransaksiDialog({ open, onOpenChange, tabungan }: Transa
             <div className={`p-3 rounded-lg border ${
               formData.tipe === 'pemasukan' 
                 ? 'bg-green-50 border-green-200' 
-                : 'bg-red-50 border-red-200'
+                : formData.tipe === 'pengeluaran' 
+                ? 'bg-red-50 border-red-200'
+                : 'bg-blue-50 border-blue-200'
             }`}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <span className="text-sm font-medium">Preview:</span>
-                <div className="flex items-center gap-2">
-                  {formData.tipe === 'pemasukan' ? (
-                    <ArrowUpRight className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <ArrowDownRight className="h-4 w-4 text-red-600" />
-                  )}
-                  <span className={`font-bold text-sm ${
-                    formData.tipe === 'pemasukan' ? 'text-green-700' : 'text-red-700'
-                  }`}>
-                    {formData.tipe === 'pemasukan' ? '+' : '-'}
-                    {new Intl.NumberFormat('id-ID', {
-                      style: 'currency',
-                      currency: 'IDR',
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0
-                    }).format(parseFloat(formData.jumlah.replace(/\./g, '') || '0'))}
-                  </span>
-                </div>
-              </div>
-              <div className="text-xs text-gray-600 mt-1">
-                {tabungan.find(t => t.id!.toString() === formData.tabunganId)?.nama} • {formData.tanggal}
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-medium text-gray-600">Preview:</span>
+                
+                {formData.tipe === 'mutasi' ? (
+                  <div className="flex flex-col gap-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-red-700">Keluar dari {tabungan.find(t => t.id === formData.tabunganId)?.nama || '?'}</span>
+                      <span className="font-bold text-red-700">
+                        -{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(parseFloat(formData.jumlah.replace(/\./g, '') || '0') + parseFloat(formData.biayaAdmin.replace(/\./g, '') || '0'))}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-700">Masuk ke {tabungan.find(t => t.id === formData.tabunganTujuanId)?.nama || '?'}</span>
+                      <span className="font-bold text-green-700">
+                        +{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(parseFloat(formData.jumlah.replace(/\./g, '') || '0'))}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {formData.tipe === 'pemasukan' ? <ArrowUpRight className="h-4 w-4 text-green-600" /> : <ArrowDownRight className="h-4 w-4 text-red-600" />}
+                    <span className={`font-bold text-sm ${formData.tipe === 'pemasukan' ? 'text-green-700' : 'text-red-700'}`}>
+                      {formData.tipe === 'pemasukan' ? '+' : '-'}
+                      {new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0,
+                      }).format(parseFloat(formData.jumlah.replace(/\./g, '') || '0'))}
+                    </span>
+                    <span className="text-xs text-gray-600 ml-auto">
+                      {tabungan.find(t => t.id === formData.tabunganId)?.nama}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-2 pt-2">
             <Button 
               type="submit" 
               className="flex-1"
-              disabled={!formData.tipe || !formData.jumlah || !formData.tabunganId}
+              disabled={!formData.tipe || !formData.jumlah || !formData.tabunganId || (formData.tipe === 'mutasi' && !formData.tabunganTujuanId)}
             >
               Simpan Transaksi
             </Button>

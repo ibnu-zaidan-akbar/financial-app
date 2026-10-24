@@ -58,7 +58,7 @@ model User {
 model Kategori {
   id        String   @id @default(cuid())
   nama      String
-  jenis     String   // "pemasukan" atau "pengeluaran"
+  jenis     String
   icon      String?
   warna     String?
   createdAt DateTime @default(now())
@@ -71,21 +71,24 @@ model Kategori {
 }
 
 model Transaksi {
-  id          String    @id @default(cuid())
-  judul       String
-  jumlah      Float
-  deskripsi   String?
-  tanggal     DateTime
-  tipe        String    // "pemasukan" atau "pengeluaran"
-  kategoriId  String?
-  tabunganId  String?
-  userId      String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  judul            String
+  jumlah           Float
+  deskripsi        String?
+  tanggal          DateTime
+  tipe             String
+  kategoriId       String?
+  tabunganId       String?
+  tabunganTujuanId String?
+  biayaAdmin       Float?    @default(0)
+  userId           String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   
-  kategori    Kategori? @relation(fields: [kategoriId], references: [id])
-  tabungan    Tabungan? @relation(fields: [tabunganId], references: [id])
-  user        User      @relation(fields: [userId], references: [id])
+  kategori       Kategori? @relation(fields: [kategoriId], references: [id])
+  tabungan       Tabungan? @relation("TabunganAsal", fields: [tabunganId], references: [id])
+  tabunganTujuan Tabungan? @relation("TabunganTujuan", fields: [tabunganTujuanId], references: [id])
+  user           User      @relation(fields: [userId], references: [id])
   
   @@map("transaksi")
 }
@@ -99,19 +102,20 @@ model Tabungan {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   
-  transaksi Transaksi[]
-  user      User      @relation(fields: [userId], references: [id])
+  transaksiAsal   Transaksi[] @relation("TabunganAsal")
+  transaksiTujuan Transaksi[] @relation("TabunganTujuan")
+  user            User        @relation(fields: [userId], references: [id])
   
   @@map("tabungan")
 }
 
 model Anggaran {
-  id          String    @id @default(cuid())
-  kategori    String
-  jumlah      Float
-  periode     String    // "bulanan", "tahunan"
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(cuid())
+  kategori  String
+  jumlah    Float
+  periode   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   
   @@map("anggaran")
 }

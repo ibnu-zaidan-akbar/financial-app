@@ -2,7 +2,7 @@
 import { prisma } from '@/lib/prisma';
 
 export async function syncTransaksiToCloud(userId: string, data: any) {
-  const { id, tanggal, createdAt, updatedAt, ...rest } = data;
+  const { id, tanggal, createdAt, updatedAt, tabunganTujuanId, biayaAdmin, ...rest } = data;
 
   return await prisma.transaksi.upsert({
     where: { id: id },
@@ -10,12 +10,16 @@ export async function syncTransaksiToCloud(userId: string, data: any) {
       ...rest,
       tanggal: new Date(tanggal),
       updatedAt: new Date(),
+      tabunganTujuanId: tabunganTujuanId || null,
+      biayaAdmin: biayaAdmin ? Number(biayaAdmin) : 0,
     },
     create: {
       ...rest,
       id: id,
       userId: userId,
       tanggal: new Date(tanggal),
+      tabunganTujuanId: tabunganTujuanId || null,
+      biayaAdmin: biayaAdmin ? Number(biayaAdmin) : 0,
     }
   });
 }
@@ -78,6 +82,27 @@ export async function deleteTransaksiFromCloud(userId: string, id: string) {
     });
   } catch (error) {
     console.error("Gagal menghapus transaksi di Cloud:", error);
+    throw error;
+  }
+}
+
+export async function deleteTabunganWithTransactionsFromCloud(userId: string, tabunganId: string) {
+  try {
+    await prisma.transaksi.deleteMany({
+      where: {
+        userId: userId,
+        OR: [
+          { tabunganId: tabunganId },
+          { tabunganTujuanId: tabunganId }
+        ]
+      }
+    });
+
+    return await prisma.tabungan.delete({
+      where: { id: tabunganId, userId: userId }
+    });
+  } catch (error) {
+    console.error("Gagal menghapus tabungan beserta transaksinya di Cloud:", error);
     throw error;
   }
 }

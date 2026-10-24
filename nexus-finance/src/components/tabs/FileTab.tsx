@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Download, Upload, Database, FileSpreadsheet, Settings } from 'lucide-react';
+import { Download, Upload, Database, FileSpreadsheet } from 'lucide-react';
 import { ExportDialog } from '@/components/dialogs/ExportDialog';
 import { ImportDialog } from '@/components/dialogs/ImportDialog';
 import { useFinancial } from '@/lib/financial-context';
@@ -25,7 +24,7 @@ export default function FileTab() {
   const handleExport = async (type: 'transactions' | 'savings') => {
     try {
       await exportData(type);
-      toast.success(`Data ${type === 'savings' ? 'Tabungan' : 'Transaksi'} berhasil di-export!`);
+      toast.success('Laporan Keuangan berhasil di-export!');
     } catch (error) {
       console.error('Export failed:', error);
       toast.error('Export gagal. Silakan coba lagi.');
@@ -105,32 +104,17 @@ export default function FileTab() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button
-                onClick={() => setShowExportDialog(true)}
-                disabled={transaksi.length === 0}
-                className="h-20 flex-col gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <FileSpreadsheet className="h-6 w-6" />
-                <span>Export Laporan Keuangan</span>
-                <span className="text-xs text-blue-100">
-                  {transaksi.length} transaksi • {tabungan.length} tabungan
-                </span>
-              </Button>
-              
-              <Button
-                onClick={() => setShowExportDialog(true)}
-                disabled={transaksi.length === 0}
-                variant="outline"
-                className="h-20 flex-col gap-2"
-              >
-                <Settings className="h-6 w-6" />
-                <span>Pilih Format Export</span>
-                <span className="text-xs text-gray-500">
-                  Export ke format .xlsx
-                </span>
-              </Button>
-            </div>
+            <Button
+              onClick={() => setShowExportDialog(true)}
+              disabled={transaksi.length === 0}
+              className="w-full h-20 flex-col gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <FileSpreadsheet className="h-6 w-6" />
+              <span>Export Laporan Keuangan</span>
+              <span className="text-xs text-blue-100">
+                {transaksi.length} transaksi • {tabungan.length} tabungan
+              </span>
+            </Button>
             
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-medium text-blue-800 mb-2">Fitur Export:</h4>
