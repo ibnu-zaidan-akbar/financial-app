@@ -565,36 +565,44 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
         const summarySheet = workbook.addWorksheet('Total Saldo');
 
-        summarySheet.mergeCells('A1:C2');
-        const summaryTitleCell = summarySheet.getCell('A1');
+        summarySheet.mergeCells('B2:D3');
+        const summaryTitleCell = summarySheet.getCell('B2');
         summaryTitleCell.value = 'DAFTAR TABUNGAN & TOTAL SALDO';
         summaryTitleCell.font = { size: 16, bold: true, name: 'Times New Roman' };
         summaryTitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-        const summaryHeaders = ['Nama Dompet / Bank', 'Total Saldo Saat Ini', 'Tanggal Dibuat'];
-        summarySheet.getRow(4).values = summaryHeaders;
+        const summaryHeaders = ['', 'Nama Dompet / Bank', 'Total Saldo Saat Ini', 'Tanggal Dibuat'];
+        summarySheet.getRow(5).values = summaryHeaders;
 
-        const summaryHeaderRow = summarySheet.getRow(4);
-        summaryHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Times New Roman' };
-        summaryHeaderRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
-        summaryHeaderRow.alignment = { horizontal: 'center' };
+        [2, 3, 4].forEach(colIndex => {
+          const cell = summarySheet.getCell(5, colIndex);
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Times New Roman' };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+        });
 
         tabungan.forEach(t => {
           const row = summarySheet.addRow([
+            '',
             t.nama,
             t.jumlah,
             new Date(t.createdAt).toLocaleDateString('id-ID')
           ]);
-          row.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+          [2, 3, 4].forEach(colIndex => {
+            const cell = row.getCell(colIndex);
+            cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+          });
         });
 
-        summarySheet.getColumn(2).numFmt = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "0"_);_(@_)';
-        summarySheet.getColumn(1).width = 25;
+        summarySheet.getColumn(1).width = 5;
         summarySheet.getColumn(2).width = 25;
-        summarySheet.getColumn(3).width = 15;
+        summarySheet.getColumn(3).width = 25;
+        summarySheet.getColumn(4).width = 15;
+        summarySheet.getColumn(3).numFmt = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "0"_);_(@_)';
 
-        summarySheet.eachRow({ includeEmpty: true }, (row) => {
-          row.eachCell({ includeEmpty: true }, (cell) => {
+        summarySheet.eachRow((row) => {
+          row.eachCell((cell) => {
             const currentFont = cell.font || {};
             cell.font = { ...currentFont, name: 'Times New Roman' };
           });
@@ -645,7 +653,8 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
             const colMap: Record<string, { in: number; out: number; balance: number }> = {};
             const catMap: Record<string, { balance: number; tabs: string[] }> = {};
-            const currencyColumns: number[] = [];
+            const inOutColumns: number[] = [];
+            const balanceColumns: number[] = [];
             const mergesToApply: [number, number, number, number][] = [];
             let currentCol = 3;
 
@@ -661,7 +670,8 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
                 mergesToApply.push([4, currentCol, 4, currentCol + 2]);
 
                 colMap[tab.id] = { in: currentCol, out: currentCol + 1, balance: currentCol + 2 };
-                currencyColumns.push(currentCol, currentCol + 1, currentCol + 2);
+                inOutColumns.push(currentCol, currentCol + 1);
+                balanceColumns.push(currentCol + 2);
                 currentCol += 3;
               });
 
@@ -670,7 +680,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
               headerRow5.push('');
               mergesToApply.push([4, currentCol, 5, currentCol]);
               catMap[cat].balance = currentCol;
-              currencyColumns.push(currentCol);
+              balanceColumns.push(currentCol);
               currentCol += 1;
             });
 
@@ -682,7 +692,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
             mergesToApply.push([4, totalColIndex, 5, totalColIndex]);
             mergesToApply.push([4, noteColIndex, 5, noteColIndex]);
-            currencyColumns.push(totalColIndex);
+            balanceColumns.push(totalColIndex);
 
             worksheet.getRow(4).values = headerRow4;
             worksheet.getRow(5).values = headerRow5;
@@ -901,9 +911,15 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
             titleCell.font = { size: 16, bold: true, name: 'Times New Roman' };
             titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-            const accountingFormat = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "0"_);_(@_)';
-            currencyColumns.forEach(colIndex => {
-              worksheet.getColumn(colIndex).numFmt = accountingFormat;
+            const formatInOut = '_("Rp"* #,##0_);_("Rp"* (#,##0);"-";_(@_)';
+            const formatSaldo = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "0"_);_(@_)';
+
+            inOutColumns.forEach(colIndex => {
+              worksheet.getColumn(colIndex).numFmt = formatInOut;
+            });
+
+            balanceColumns.forEach(colIndex => {
+              worksheet.getColumn(colIndex).numFmt = formatSaldo;
             });
 
             worksheet.getColumn(1).width = 5;
